@@ -1,8 +1,0 @@
-/Users/mlennox/projects/geohash/geohash-net/geohash-net-unit-tests/obj/Debug/.NETFramework,Version=v4.5.AssemblyAttribute.cs
-/Users/mlennox/projects/geohash/geohash-net/geohash-net-unit-tests/bin/Debug/geohash-net-unit-tests.dll.mdb
-/Users/mlennox/projects/geohash/geohash-net/geohash-net-unit-tests/bin/Debug/geohash-net-unit-tests.dll
-/Users/mlennox/projects/geohash/geohash-net/geohash-net-unit-tests/obj/Debug/geohash-net-unit-tests.dll
-/Users/mlennox/projects/geohash/geohash-net/geohash-net-unit-tests/obj/Debug/geohash-net-unit-tests.dll.mdb
-/Users/mlennox/projects/geohash/geohash-net/geohash-net-unit-tests/bin/Debug/nunit.framework.dll
-/Users/mlennox/projects/geohash/geohash-net/geohash-net-unit-tests/bin/Debug/Geohash.dll
-/Users/mlennox/projects/geohash/geohash-net/geohash-net-unit-tests/bin/Debug/Geohash.dll.mdb
