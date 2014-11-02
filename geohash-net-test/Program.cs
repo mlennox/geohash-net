@@ -20,6 +20,7 @@
  *  THE SOFTWARE.
  */
 using System.Diagnostics;
+using System;
 
 namespace sharonjl.utils
 { 
@@ -29,7 +30,7 @@ namespace sharonjl.utils
         {
             const double testLat = 40.7571397;
             const double testLong = -73.9891705;
-            const int precision = 13;
+            const int precision = 20;
 
             // Calculate hash with full precision
             string hash = Geohash.Encode(testLat, testLong, precision);
@@ -37,14 +38,14 @@ namespace sharonjl.utils
             // Print out the hash for a range of precision
             for (int i = 1; i <= precision; i++)
             {
-                Debug.WriteLine("{0}, {1} {2}: {3}", testLat, testLong, i, Geohash.Encode(testLat, testLong, i));
+                Console.WriteLine("{0}, {1} {2}: {3}", testLat, testLong, i, Geohash.Encode(testLat, testLong, i));
             }
 
             // Print neighbours
-            Debug.WriteLine("{0} \t: {1}", "T", Geohash.CalculateAdjacent(hash, Geohash.Direction.Top));
-            Debug.WriteLine("{0} \t: {1}", "L", Geohash.CalculateAdjacent(hash, Geohash.Direction.Left));
-            Debug.WriteLine("{0} \t: {1}", "R", Geohash.CalculateAdjacent(hash, Geohash.Direction.Right));
-            Debug.WriteLine("{0} \t: {1}", "B", Geohash.CalculateAdjacent(hash, Geohash.Direction.Bottom));
+            Console.WriteLine("{0} \t: {1}", "T", Geohash.CalculateAdjacent(hash, Geohash.Direction.Top));
+			Console.WriteLine("{0} \t: {1}", "L", Geohash.CalculateAdjacent(hash, Geohash.Direction.Left));
+			Console.WriteLine("{0} \t: {1}", "R", Geohash.CalculateAdjacent(hash, Geohash.Direction.Right));
+			Console.WriteLine("{0} \t: {1}", "B", Geohash.CalculateAdjacent(hash, Geohash.Direction.Bottom));
         }
     }
 }
