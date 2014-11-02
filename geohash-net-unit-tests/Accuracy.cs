@@ -10,49 +10,49 @@ namespace geohashnetunittests
 		[Test]
 		public void GeohashDecodeLocationError_5Bits ()
 		{
-			GeocodeDecodeLocationError (TestLocations.KeyedLocations ["Reykjavic"], 5, 2670);
+			GeocodeDecodeLocationError (TestLocations.KeyedLocations ["Reykjavic"], 5);
 		}
 
 		[Test]
 		public void Reykjavik_GeohashDecodeLocationError_6Bits ()
 		{
-			GeocodeDecodeLocationError (TestLocations.KeyedLocations ["Reykjavic"], 6, 405);
+			GeocodeDecodeLocationError (TestLocations.KeyedLocations ["Reykjavic"], 6);
 		}
 
 		[Test]
 		public void Reykjavik_GeohashDecodeLocationError_7Bits ()
 		{
-			GeocodeDecodeLocationError (TestLocations.KeyedLocations ["Reykjavic"], 7, 85);
+			GeocodeDecodeLocationError (TestLocations.KeyedLocations ["Reykjavic"], 7);
 		}
 
 		[Test]
 		public void Reykjavik_GeohashDecodeLocationError_8Bits ()
 		{
-			GeocodeDecodeLocationError (TestLocations.KeyedLocations ["Reykjavic"], 8, 13);
+			GeocodeDecodeLocationError (TestLocations.KeyedLocations ["Reykjavic"], 8);
 		}
 
 		[Test]
 		public void Reykjavik_GeohashDecodeLocationError_9Bits ()
 		{
-			GeocodeDecodeLocationError (TestLocations.KeyedLocations ["Reykjavic"], 9, 2.6);
+			GeocodeDecodeLocationError (TestLocations.KeyedLocations ["Reykjavic"], 9);
 		}
 
 		[Test]
 		public void Reykjavik_GeohashDecodeLocationError_10Bits ()
 		{
-			GeocodeDecodeLocationError (TestLocations.KeyedLocations ["Reykjavic"], 10, 0.45);
+			GeocodeDecodeLocationError (TestLocations.KeyedLocations ["Reykjavic"], 10);
 		}
 
 		[Test]
 		public void Reykjavik_GeohashDecodeLocationError_12Bits ()
 		{
-			GeocodeDecodeLocationError (TestLocations.KeyedLocations ["Reykjavic"], 12, 0.015);
+			GeocodeDecodeLocationError (TestLocations.KeyedLocations ["Reykjavic"], 12);
 		}
 
 		[Test]
 		public void PicBlanc_GeohashDecodeLocationError_10Bits ()
 		{
-			GeocodeDecodeLocationError (TestLocations.KeyedLocations ["Pic Blanc"], 10, 0.45);
+			GeocodeDecodeLocationError (TestLocations.KeyedLocations ["Pic Blanc"], 10);
 		}
 
 
@@ -60,14 +60,14 @@ namespace geohashnetunittests
 		[Test]
 		public void PicBlanc_GeohashDecodeLocationError_12Bits ()
 		{
-			GeocodeDecodeLocationError (TestLocations.KeyedLocations ["Pic Blanc"], 12, 0.015);
+			GeocodeDecodeLocationError (TestLocations.KeyedLocations ["Pic Blanc"], 12);
 		}
 
 
 		[Test]
 		public void Tara_GeohashDecodeLocationError_12Bits ()
 		{
-			GeocodeDecodeLocationError (TestLocations.KeyedLocations ["Tara"], 12, 0.015);
+			GeocodeDecodeLocationError (TestLocations.KeyedLocations ["Tara"], 12);
 		}
 
 
@@ -79,19 +79,18 @@ namespace geohashnetunittests
 		/// </summary>
 		/// <param name="loc">Location.</param>
 		/// <param name="bits">Bits.</param>
-		/// <param name="expectedLargestError">Expected largest error.</param>
-		private void GeocodeDecodeLocationError(Location loc, int bits, double expectedLargestError)
+		private void GeocodeDecodeLocationError(Location loc, int bits)
 		{
-			// TODO: the largest error should be expressed in percentage - based on the bounding box size
-
-			var steps = 14000;
+			var steps = 5000;
 			var rotations = 4;
+			var areaMultiplier = 2;
 
 			var hash = Geohash.Encode (loc, bits);
-			var size = Geohash.CalculateAngularSize (hash);
-			var step = size[0] * 3 / steps;
+			var angularSize = Geohash.CalculateAngularSize (hash);
+			var step = angularSize[0] * areaMultiplier / steps;
 
-			var largestError = Double.MinValue;
+			var largestErrorLatitude = Double.MinValue;
+			var largestErrorLongitude = Double.MinValue;
 
 			for (var j = steps ; j > 0 ; j--){
 
@@ -104,14 +103,20 @@ namespace geohashnetunittests
 
 				var unencodedGeohash = Geohash.Decode (geohash);
 
-				var haversineDiff = Geohash.HaversineDistance (newLoc, unencodedGeohash);
+				var latDiff = Math.Abs (newLoc.Latitude - unencodedGeohash.Latitude);
+				var lonDiff = Math.Abs (newLoc.Longitude - unencodedGeohash.Longitude);
 
-				largestError = haversineDiff > largestError
-					? haversineDiff
-					: largestError;
+				largestErrorLatitude = latDiff > largestErrorLatitude
+					? latDiff
+					: largestErrorLatitude;
+
+				largestErrorLongitude = lonDiff > largestErrorLongitude
+					? lonDiff
+					: largestErrorLongitude;
 			}
-
-			Assert.That (largestError , Is.LessThan (expectedLargestError));
+				
+			Assert.That (largestErrorLatitude , Is.LessThan (angularSize [0]));
+			Assert.That (largestErrorLongitude , Is.LessThan (angularSize [1]));
 		}
 
 	}
