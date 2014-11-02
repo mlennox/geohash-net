@@ -2,6 +2,7 @@ geohash-net-test/bin
 geohash-net-test/obj
 geohash-net/bin
 geohash-net/obj
+packages/**
 _ReSharper.geohash-net
 _ReSharper.geohash-net-test
 geohash-net*.ReSharper*

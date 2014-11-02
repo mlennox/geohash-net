@@ -31,28 +31,22 @@ namespace sharonjl.utils
 {
 	public static class Geohash
 	{
-		#region Direction enum
 
-		public enum Direction
-		{
-			Top = 0,
-			Right = 1,
-			Bottom = 2,
-			Left = 3 
-		}
-
-		#endregion
 
 		private const string Base32 = "0123456789bcdefghjkmnpqrstuvwxyz";
 		private static readonly int[] Bits = new[] {16, 8, 4, 2, 1};
+		private static readonly int[] OddnessLookup = {0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1};
 
 		private static readonly string[][] Neighbors = {
+			// even
 			new[] {
 				"p0r21436x8zb9dcf5h7kjnmqesgutwvy", // Top
 				"bc01fg45238967deuvhjyznpkmstqrwx", // Right
 				"14365h7k9dcfesgujnmqp0r2twvyx8zb", // Bottom
 				"238967debc01fg45kmstqrwxuvhjyznp", // Left
-			}, new[] {
+			}, 
+			// odd
+			new[] {
 				"bc01fg45238967deuvhjyznpkmstqrwx", // Top
 				"p0r21436x8zb9dcf5h7kjnmqesgutwvy", // Right
 				"238967debc01fg45kmstqrwxuvhjyznp", // Bottom
@@ -61,24 +55,27 @@ namespace sharonjl.utils
 		};
 
 		private static readonly string[][] Borders = {
+			// even
 			new[] { "prxz", "bcfguvyz", "028b", "0145hjnp" },
+			// odd
 			new[] { "bcfguvyz", "prxz", "0145hjnp", "028b" }
 		};
 
-		public static String CalculateAdjacent(String hash, Direction direction)
+		public static String CalculateAdjacent(string hash, Direction direction)
 		{
 			hash = hash.ToLower();
 
 			char lastChr = hash[hash.Length - 1];
-			int type = hash.Length%2;
+			var oddness = OddnessLookup[hash.Length]; // 0 = even, 1 = odd
 			var dir = (int) direction;
-			string nHash = hash.Substring(0, hash.Length - 1);
+			var nHash = hash.Substring(0, hash.Length - 1);
 
-			if (Borders[type][dir].IndexOf(lastChr) != -1)
+			if (Borders[oddness][dir].IndexOf(lastChr) != -1)
 			{
-				nHash = CalculateAdjacent(nHash, (Direction) dir);
+				nHash = CalculateAdjacent(nHash, direction);
 			}
-			return nHash + Base32[Neighbors[type][dir].IndexOf(lastChr)];
+
+			return nHash + Base32[Neighbors[oddness][dir].IndexOf(lastChr)];
 		}
 
 		public static void RefineInterval(ref double[] interval, int cd, int mask)
@@ -93,7 +90,7 @@ namespace sharonjl.utils
 			}
 		}
 
-		public static double[] Decode(String geohash)
+		public static Location Decode(String geohash)
 		{
 			bool even = true;
 			double[] lat = {-90.0, 90.0};
@@ -117,10 +114,13 @@ namespace sharonjl.utils
 				}
 			}
 
-			return new[] {(lat[0] + lat[1])/2, (lon[0] + lon[1])/2};
+			return new Location {
+				Latitude = (lat[0] + lat[1])/2, 
+				Longitude = (lon[0] + lon[1])/2
+			};
 		}
 
-		public static String Encode(double latitude, double longitude, int precision = 12)
+		public static string Encode(Location location, int precision = 16)
 		{
 			bool even = true;
 			int bit = 0;
@@ -130,7 +130,8 @@ namespace sharonjl.utils
 			double[] lat = {-90.0, 90.0};
 			double[] lon = {-180.0, 180.0};
 
-			if (precision < 1 || precision > 20) precision = 12;
+			// hashes over 22 bits seem invalid, and long hashes only seem useful near poles
+			if (precision < 1 || precision > 22) precision = 22;
 
 			while (geohash.Length < precision)
 			{
@@ -139,7 +140,7 @@ namespace sharonjl.utils
 				if (even)
 				{
 					mid = (lon[0] + lon[1])/2;
-					if (longitude > mid)
+					if (location.Longitude > mid)
 					{
 						ch |= Bits[bit];
 						lon[0] = mid;
@@ -150,7 +151,7 @@ namespace sharonjl.utils
 				else
 				{
 					mid = (lat[0] + lat[1])/2;
-					if (latitude > mid)
+					if (location.Latitude > mid)
 					{
 						ch |= Bits[bit];
 						lat[0] = mid;
@@ -202,8 +203,8 @@ namespace sharonjl.utils
 			var bits = geoHash.Length;
 			var power = (5 * bits + (bits % 2)) / 2;
 
-			var angularH = 180 / Math.Pow (2.0, power);
-			var angularW = 180 / Math.Pow (2.0, power - 1);
+			var angularH = 180.0 / Math.Pow(2.0, power);
+			var angularW = 180.0 / Math.Pow(2.0,power - 1);
 
 			return new [] { angularH, angularW };
 		}
@@ -215,20 +216,47 @@ namespace sharonjl.utils
 		public static double[] CalculateSize(string geoHash){
 
 			var geoPos = Decode (geoHash);
-			var La = geoPos [0];
 
-			var LLa = 111132.954
-				- (559.882 * Math.Cos (DegreeToRadian (2 * La)))
-				+ (1.175 * Math.Cos (DegreeToRadian (4 * La)));
+			var angularSize = CalculateAngularSize (geoHash);
 
-			var LLd = (Math.PI / 180) * 6378137 * Math.Cos (DegreeToRadian (La));
-
-			return new [] { LLa, LLd };
+			return CalculateSize (geoPos, angularSize);
 		}
 
-		private static double DegreeToRadian(double angle)
+		private static double[] CalculateSize(Location geoPos, double[] angSize){
+
+			// first calculate the size of a degree at the selected latitude
+			var LLa = 111132.954
+				- (559.882 * Math.Cos ((2.0 * geoPos.Latitude).ToRadian()))
+				+ (1.175 * Math.Cos ((4.0 * geoPos.Latitude).ToRadian()));
+
+			var LLd = (Math.PI / 180) * 6378137 * Math.Cos ( geoPos.Latitude.ToRadian());
+
+			// now return the size of a degree by the angular size
+			return new [] { LLa * angSize[0], LLd * angSize[1] };
+		}
+
+		/// <summary>
+		/// Returns the surface distance in meters between two points on a globe, rather than the straight
+		/// line distance (which probably cuts below the surface)
+		/// Note: this is only an approximation due to calculating on an assumed sphere
+		/// Better to replace with a combination of the short and long line methods listed here:
+		/// https://en.wikipedia.org/wiki/Geographical_distance
+		/// </summary>
+		/// <returns>The distance.</returns>
+		/// <param name="locA">The first point</param>
+		/// <param name="locB">The second point</param>
+		public static double HaversineDistance(Location locA, Location locB)
 		{
-			return Math.PI * angle / 180.0;
+			const double R = 6371;
+
+			var lat = (locB.Latitude - locA.Latitude).ToRadian();
+			var lng = (locB.Longitude - locA.Longitude).ToRadian();
+			var h1 = (Math.Sin(lat / 2) * Math.Sin(lat / 2)) 
+				+ (Math.Cos(locA.Latitude.ToRadian()) * Math.Cos(locB.Latitude.ToRadian()) *
+					Math.Sin(lng / 2) * Math.Sin(lng / 2));
+			var h2 = 2 * Math.Asin(Math.Min(1, Math.Sqrt(h1)));
+
+			return R * h2 * 1000;
 		}
 	}
 }
